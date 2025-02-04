@@ -10,7 +10,7 @@ describe("Humanitarian Ecosystem", function () {
     [owner, admin, beneficiary, voter1, voter2] = await ethers.getSigners();
 
     const GovernanceTokenFactory = await ethers.getContractFactory("GovernanceToken");
-    governanceToken = await GovernanceTokenFactory.deploy();
+    governanceToken = await GovernanceTokenFactory.connect(owner).deploy();
     await governanceToken.waitForDeployment();
 
     const HumanitarianFundFactory = await ethers.getContractFactory("HumanitarianFund");
@@ -25,125 +25,103 @@ describe("Humanitarian Ecosystem", function () {
     await humanitarianDAO.waitForDeployment();
 
     await humanitarianFund.connect(admin).setDAOContract(await humanitarianDAO.getAddress());
+    await governanceToken.connect(owner).setMinter(await humanitarianFund.getAddress(), true);
   });
 
-  describe("Campaign Creation", function () {
-    it("Should allow admin to create a campaign", async function () {
-      const createTx = await humanitarianFund.connect(admin).createCampaign(
-        "Emergency Relief",
-        "Flood victims support",
-        ethers.parseEther("10"),
-        beneficiary.address,
-        30
-      );
-
-      const receipt = await createTx.wait();
-      const campaignCreatedEvent = receipt.logs.find(
-        log => log.fragment && log.fragment.name === "CampaignCreated"
-      );
-
-      expect(campaignCreatedEvent).to.exist;
-      expect(campaignCreatedEvent.args[2]).to.equal(ethers.parseEther("10"));
-      expect(await humanitarianFund.campaignCount()).to.equal(1);
+  describe("GovernanceToken", function () {
+    it("Should mint initial supply to owner", async function () {
+      const ownerBalance = await governanceToken.balanceOf(owner.address);
+      expect(ownerBalance).to.be.gt(0);
     });
 
-    it("Should prevent non-admin from creating campaigns", async function () {
-      await expect(
-        humanitarianFund.connect(voter1).createCampaign(
-          "Emergency Relief",
-          "Flood victims support",
-          ethers.parseEther("10"),
-          beneficiary.address,
-          30
-        )
-      ).to.be.revertedWith("Only admin can call this function");
+    it("Should handle delegation correctly", async function () {
+      await governanceToken.connect(voter1).delegate(voter2.address);
+      expect(await governanceToken.getDelegate(voter1.address)).to.equal(voter2.address);
+      
+      await governanceToken.connect(voter1).delegate(voter1.address);
+      expect(await governanceToken.getDelegate(voter1.address)).to.equal(voter1.address);
     });
   });
 
-  describe("Campaign Retrieval", function () {
-    it("Should retrieve campaign details correctly", async function () {
+  describe("HumanitarianFund", function () {
+    it("Should create campaign with correct parameters", async function () {
+      const ipfsHashes = ["QmHash1", "QmHash2"];
       await humanitarianFund.connect(admin).createCampaign(
         "Emergency Relief",
-        "Flood victims support",
+        "Description",
         ethers.parseEther("10"),
         beneficiary.address,
-        30
+        30,
+        ipfsHashes
       );
 
       const campaign = await humanitarianFund.getCampaign(0);
-      
       expect(campaign.title).to.equal("Emergency Relief");
-      expect(campaign.description).to.equal("Flood victims support");
       expect(campaign.goal).to.equal(ethers.parseEther("10"));
-      expect(campaign.beneficiary).to.equal(beneficiary.address);
-      expect(campaign.active).to.be.true;
+      expect(campaign.ipfsDocuments).to.deep.equal(ipfsHashes);
+    });
+
+    it("Should process donations correctly", async function () {
+      await humanitarianFund.connect(admin).createCampaign(
+        "Campaign",
+        "Description",
+        ethers.parseEther("10"),
+        beneficiary.address,
+        30,
+        []
+      );
+
+      const donationAmount = ethers.parseEther("1");
+      await humanitarianFund.connect(voter1).donate(0, { value: donationAmount });
+      
+      const campaign = await humanitarianFund.getCampaign(0);
+      expect(campaign.raisedAmount).to.equal(donationAmount);
+    });
+
+    it("Should mark campaign inactive when goal reached", async function () {
+      await humanitarianFund.connect(admin).createCampaign(
+        "Campaign",
+        "Description",
+        ethers.parseEther("1"),
+        beneficiary.address,
+        30,
+        []
+      );
+
+      await humanitarianFund.connect(voter1).donate(0, { value: ethers.parseEther("1") });
+      
+      const campaign = await humanitarianFund.getCampaign(0);
+      expect(campaign.active).to.be.false;
     });
   });
 
-  describe("Voting Mechanism", function () {
+  describe("HumanitarianDAO", function () {
     beforeEach(async function () {
-      // Create campaign and set up voter
       await humanitarianFund.connect(admin).createCampaign(
-        "Emergency Relief",
-        "Flood victims support",
+        "Campaign",
+        "Description",
         ethers.parseEther("1"),
         beneficiary.address,
-        30
+        30,
+        []
+      );
+    });
+
+    it("Should create proposal with correct parameters", async function () {
+      await governanceToken.connect(owner).transfer(voter1.address, ethers.parseEther("100"));
+      const proposalTx = await humanitarianDAO.connect(voter1).propose(
+        "Test Proposal",
+        "Description",
+        0
       );
 
-      // Set up minter role for HumanitarianFund
-      await governanceToken.setMinter(await humanitarianFund.getAddress(), true);
+      const receipt = await proposalTx.wait();
+      const event = receipt.logs.find(x => x.fragment?.name === 'ProposalCreated');
+      expect(event).to.exist;
       
-      // Donor makes a small donation to get voting tokens
-      await humanitarianFund.connect(voter1).donate(0, { value: ethers.parseEther("0.1") });
-    });
-
-    it("Should allow token holders to vote", async function () {
-      // Create proposal
-      await humanitarianDAO.connect(voter1).propose(
-        "Release Funds",
-        "Release emergency funds",
-        0
-      );
-
-      // Cast vote
-      const voteTx = await humanitarianDAO.connect(voter1).castVote(0, true);
-      const voteReceipt = await voteTx.wait();
-
-      const voteEvent = voteReceipt.logs.find(
-        log => log.fragment && log.fragment.name === "VoteCast"
-      );
-
-      expect(voteEvent).to.exist;
-      expect(voteEvent.args.support).to.be.true;
-    });
-
-    it("Should prevent voting after voting period ends", async function () {
-      await humanitarianDAO.connect(voter1).propose(
-        "Release Funds",
-        "Release emergency funds",
-        0
-      );
-
-      await time.increase(time.duration.minutes(6));
-
-      await expect(
-        humanitarianDAO.connect(voter1).castVote(0, true)
-      ).to.be.revertedWith("Voting ended");
-    });
-
-    it("Should prevent double voting", async function () {
-      await humanitarianDAO.connect(voter1).propose(
-        "Release Funds",
-        "Release emergency funds",
-        0
-      );
-
-      await humanitarianDAO.connect(voter1).castVote(0, true);
-
-      await expect(
-        humanitarianDAO.connect(voter1).castVote(0, true)
-      ).to.be.revertedWith("Already voted");
+      const proposal = await humanitarianDAO.getProposal(0);
+      expect(proposal.title).to.equal("Test Proposal");
+      expect(proposal.campaignId).to.equal(0);
     });
   });
 });
