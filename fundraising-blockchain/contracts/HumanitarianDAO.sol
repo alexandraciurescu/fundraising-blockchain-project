@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./GovernanceToken.sol";
 import "./HumanitarianFund.sol";
+import "./DAOObserver.sol";
 
 contract HumanitarianDAO {
     struct Proposal {
@@ -45,9 +46,13 @@ contract HumanitarianDAO {
     event ProposalExecuted(uint256 indexed proposalId);
     event ProposalCanceled(uint256 indexed proposalId);
 
-    constructor(address _token, address _fund) {
+
+    DAOObserver public observer;
+
+    constructor(address _token, address _fund, address _observer) {
         token = GovernanceToken(_token);
         fund = HumanitarianFund(_fund);
+        observer = DAOObserver(_observer);
         quorumVotes = token.totalSupply() / 4;
     }
 
@@ -86,6 +91,7 @@ contract HumanitarianDAO {
             newProposal.startTime,
             newProposal.endTime
         );
+        observer.onProposalCreated(proposalId, msg.sender, title);
 
         return proposalId;
     }
@@ -107,6 +113,7 @@ contract HumanitarianDAO {
         proposal.hasVoted[msg.sender] = true;
 
         emit VoteCast(msg.sender, proposalId, support, votes);
+        observer.onVoteCast(proposalId, msg.sender, support, votes);
     }
 
     function _hasReachedQuorum(uint256 totalVotes) private view returns (bool) {
@@ -130,6 +137,7 @@ contract HumanitarianDAO {
         fund.releaseFunds(proposal.campaignId);
 
         emit ProposalExecuted(proposalId);
+        observer.onProposalExecuted(proposalId);
     }
 
     function cancelProposal(uint256 proposalId) public {

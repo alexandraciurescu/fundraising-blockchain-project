@@ -308,7 +308,7 @@ const DAOInterface = () => {
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h2 className="text-2xl font-bold mb-4">DAO Dashboard</h2>
                 <p className="mb-4">Token Balance: {tokenBalance} HDAO</p>
-                <TokenManagement />
+               {/* <TokenManagement /> */}
 
                 <form onSubmit={createProposal} className="space-y-4 mb-6">
                     <div>

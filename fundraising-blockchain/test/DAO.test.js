@@ -3,24 +3,36 @@ const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("Humanitarian Ecosystem", function () {
-  let governanceToken, humanitarianFund, humanitarianDAO;
+  let governanceToken, humanitarianFund, humanitarianDAO, daoObserver;
   let owner, admin, beneficiary, voter1, voter2;
 
   beforeEach(async function () {
     [owner, admin, beneficiary, voter1, voter2] = await ethers.getSigners();
 
+    // Deploy GovernanceToken
     const GovernanceTokenFactory = await ethers.getContractFactory("GovernanceToken");
     governanceToken = await GovernanceTokenFactory.connect(owner).deploy();
     await governanceToken.waitForDeployment();
 
+    // Deploy DAOObserver
+    const DAOObserverFactory = await ethers.getContractFactory("DAOObserver");
+    daoObserver = await DAOObserverFactory.deploy();
+    await daoObserver.waitForDeployment();
+
+    // Deploy HumanitarianFund
     const HumanitarianFundFactory = await ethers.getContractFactory("HumanitarianFund");
-    humanitarianFund = await HumanitarianFundFactory.connect(admin).deploy(await governanceToken.getAddress());
+    humanitarianFund = await HumanitarianFundFactory.connect(admin).deploy(
+      await governanceToken.getAddress(),
+      await daoObserver.getAddress()
+    );
     await humanitarianFund.waitForDeployment();
 
+    // Deploy HumanitarianDAO
     const HumanitarianDAOFactory = await ethers.getContractFactory("HumanitarianDAO");
     humanitarianDAO = await HumanitarianDAOFactory.deploy(
       await governanceToken.getAddress(), 
-      await humanitarianFund.getAddress()
+      await humanitarianFund.getAddress(),
+      await daoObserver.getAddress()
     );
     await humanitarianDAO.waitForDeployment();
 
@@ -28,6 +40,7 @@ describe("Humanitarian Ecosystem", function () {
     await governanceToken.connect(owner).setMinter(await humanitarianFund.getAddress(), true);
   });
 
+  // Restul testelor rămân neschimbate deoarece modificarea este doar la nivel de setup
   describe("GovernanceToken", function () {
     it("Should mint initial supply to owner", async function () {
       const ownerBalance = await governanceToken.balanceOf(owner.address);

@@ -3,8 +3,10 @@ pragma solidity ^0.8.20;
 
 import "./GovernanceToken.sol";
 import "hardhat/console.sol"; // pentru logging
+import "./DAOObserver.sol";
 
 contract HumanitarianFund {
+
     struct Campaign {
         string title;
         string description;
@@ -53,7 +55,9 @@ contract HumanitarianFund {
     // aici setam ca adminul e cel care deployeaza contractul
     // se seteaza contractul ca minter de tokeni
     // pt a le da tokeni celor care doneaza
-    constructor(address _governanceToken) {
+    DAOObserver public observer;
+    constructor(address _governanceToken, address _observer) {
+        observer = DAOObserver(_observer);
         admin = msg.sender;
         governanceToken = GovernanceToken(_governanceToken);
         // Cerem automat drepturile de mint în constructor
@@ -151,7 +155,8 @@ contract HumanitarianFund {
     governanceToken.mint(msg.sender, tokensToMint);
     
     emit DonationMade(_campaignId, msg.sender, msg.value, tokensToMint);
-    
+    observer.onDonationMade(_campaignId, msg.sender, msg.value, tokensToMint);
+
     if (campaign.raisedAmount >= campaign.goal) {
         campaign.active = false;
     }

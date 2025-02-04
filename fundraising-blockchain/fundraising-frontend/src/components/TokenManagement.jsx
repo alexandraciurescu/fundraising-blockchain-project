@@ -37,7 +37,7 @@ const TokenManagement = () => {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
             <h3 className="text-xl font-bold mb-4">Management Token-uri</h3>
             
-            {/* Formular de delegare */}
+            {/* Formular de delegare 
             <form onSubmit={delegateVotes} className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -65,6 +65,7 @@ const TokenManagement = () => {
                     </p>
                 </div>
             </form>
+            */}
 
             {/* Info despre token-uri */}
             <div className="mt-6">

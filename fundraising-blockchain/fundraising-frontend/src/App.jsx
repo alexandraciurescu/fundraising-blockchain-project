@@ -4,10 +4,12 @@ import CampaignList from './components/CampaignList';
 import DAOInterface from './components/DAOInterface';
 import WalletConnect from './components/WalletConnect';
 import { WalletProvider } from './context/WalletContext';
+import EventsViewer from './components/EventsViewer';
 
 function App() {
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns' sau 'dao'
+  // Modificăm starea pentru a include și 'events'
+  const [activeTab, setActiveTab] = useState('campaigns'); // 'campaigns', 'dao' sau 'events'
 
   return (
     <WalletProvider>
@@ -17,31 +19,42 @@ function App() {
           Platforma de Donații
         </h1>
 
-        {/* Tab Switcher */}
+        {/* Tab Switcher modificat pentru 3 butoane */}
         <div className="flex justify-center mb-8">
           <button
             onClick={() => setActiveTab('campaigns')}
-            className={`px-6 py-2 rounded-l-md ${
-              activeTab === 'campaigns' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-6 py-2 ${
+              activeTab === 'campaigns'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700'
-            }`}
+            } rounded-l-md`}
           >
             Campanii
           </button>
           <button
             onClick={() => setActiveTab('dao')}
-            className={`px-6 py-2 rounded-r-md ${
-              activeTab === 'dao' 
-                ? 'bg-blue-600 text-white' 
+            className={`px-6 py-2 ${
+              activeTab === 'dao'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700'
             }`}
           >
             DAO
           </button>
+          <button
+            onClick={() => setActiveTab('events')}
+            className={`px-6 py-2 ${
+              activeTab === 'events'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700'
+            } rounded-r-md`}
+          >
+            Evenimente
+          </button>
         </div>
 
-        {activeTab === 'campaigns' ? (
+        {/* Condiții pentru afișarea conținutului */}
+        {activeTab === 'campaigns' && (
           <>
             <div className="flex justify-center mb-8">
               <button
@@ -60,9 +73,10 @@ function App() {
 
             <CampaignList />
           </>
-        ) : (
-          <DAOInterface />
         )}
+        
+        {activeTab === 'dao' && <DAOInterface />}
+        {activeTab === 'events' && <EventsViewer />}
       </div>
     </WalletProvider>
   );

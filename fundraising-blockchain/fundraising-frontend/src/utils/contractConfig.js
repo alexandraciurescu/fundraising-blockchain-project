@@ -1,7 +1,9 @@
 // Contract addresses
-export const CONTRACT_ADDRESS = "0x5D4e0B499b02ee095664ABfCcdfAB4DdAB685Ab5";
-export const TOKEN_ADDRESS = "0xe14564c8FD3Db69720104Ae6B2bf905662A0b168";
-export const DAO_ADDRESS = "0xDD009e3730520526675004ff248a628c27804553";
+export const CONTRACT_ADDRESS = "0x8fA8df01ca4ED850b8Ae1Fb6e416810E8510EDF7";
+export const TOKEN_ADDRESS = "0x0ABbd2C36E063e6593534bE028E3bcB1cD5724f8";
+export const DAO_ADDRESS = "0x845d30CFA6f0A42F9298f7Fc3d739d23c63Fc5aE";
+export const OBSERVER_ADDRESS = "0x887f3089bC50dDFc21e85c4d4A0De2440c2803fc";
+
 
 // ABI pentru contractul original de fundraising
 export const CONTRACT_ABI = [
@@ -1140,4 +1142,293 @@ export const DAO_ABI = [
     }
 
 
+];
+
+
+// Adăugăm ABI-ul pentru Observer
+export const OBSERVER_ABI = [
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "campaignId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "donor",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "tokens",
+                "type": "uint256"
+            }
+        ],
+        "name": "onDonationMade",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "proposalId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "proposer",
+                "type": "address"
+            },
+            {
+                "internalType": "string",
+                "name": "title",
+                "type": "string"
+            }
+        ],
+        "name": "onProposalCreated",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "proposalId",
+                "type": "uint256"
+            }
+        ],
+        "name": "onProposalExecuted",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "proposalId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "address",
+                "name": "voter",
+                "type": "address"
+            },
+            {
+                "internalType": "bool",
+                "name": "support",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "votes",
+                "type": "uint256"
+            }
+        ],
+        "name": "onVoteCast",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "campaignId",
+                "type": "uint256"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "donor",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "tokens",
+                "type": "uint256"
+            }
+        ],
+        "name": "DonationObserved",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "proposalId",
+                "type": "uint256"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "proposer",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "string",
+                "name": "title",
+                "type": "string"
+            }
+        ],
+        "name": "ProposalObserved",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "proposalId",
+                "type": "uint256"
+            }
+        ],
+        "name": "ProposalExecutionObserved",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "proposalId",
+                "type": "uint256"
+            },
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "voter",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "support",
+                "type": "bool"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "votes",
+                "type": "uint256"
+            }
+        ],
+        "name": "VoteObserved",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "campaignId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getCampaignDonations",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "campaignId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "donor",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "tokens",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "timestamp",
+                        "type": "uint256"
+                    }
+                ],
+                "internalType": "struct DAOObserver.DonationActivity[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "proposalId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getProposalVotes",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "proposalId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "voter",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "bool",
+                        "name": "support",
+                        "type": "bool"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "votes",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "timestamp",
+                        "type": "uint256"
+                    }
+                ],
+                "internalType": "struct DAOObserver.VoteActivity[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
 ];
