@@ -119,6 +119,20 @@ const DAOInterface = () => {
         try {
             const signer = await provider.getSigner();
             const daoContract = new ethers.Contract(DAO_ADDRESS, DAO_ABI, signer);
+            
+            
+            /*const { gasEstimate, gasCost } = await estimateGasCost(
+                daoContract,
+                'castVote',
+                [proposalId, support]
+            );
+
+            const confirmVote = window.confirm(
+                `Cost estimat gas: ${gasCost} ETH\n` +
+                `Doriți să votați?`
+            );*/
+            
+            //if (!confirmVote) return;
             const tx = await daoContract.executeProposal(proposalId);
             await tx.wait();
             
@@ -217,7 +231,8 @@ const DAOInterface = () => {
             const tx = await daoContract.propose(
                 newProposal.title,
                 newProposal.description,
-                newProposal.campaignId
+                newProposal.campaignId,
+                {gasLimit: gasEstimate}
             );
     
             await tx.wait();
@@ -269,7 +284,7 @@ const DAOInterface = () => {
                 return;
             }
 
-            const tx = await daoContract.castVote(proposalId, support);
+            const tx = await daoContract.castVote(proposalId, support,{gasLimit: gasEstimate});
             await tx.wait();
             alert('Vot înregistrat cu succes!');
             fetchProposals();

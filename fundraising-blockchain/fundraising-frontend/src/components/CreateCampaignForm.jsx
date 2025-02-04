@@ -131,7 +131,12 @@ const CreateCampaignForm = () => {
                 goalInWei,
                 beneficiary,
                 parseInt(formData.duration),
-                ipfsHashes
+                ipfsHashes,
+                { // adăugăm obiectul de opțiuni
+                    gasLimit: gasEstimate // folosim estimarea calculată anterior
+                    // sau cu buffer de siguranță:
+                    // gasLimit: gasEstimate.mul(120).div(100) // +20% buffer
+                }
             );
 
             await tx.wait();
