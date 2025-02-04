@@ -79,6 +79,14 @@ const CampaignList = () => {
         return (Number(raisedEth) / Number(goalEth)) * 100;
     };
 
+
+    const estimateGasCost = async (contract, method, args = [], value = 0) => {
+        const gasEstimate = await contract[method].estimateGas(...args, { value });
+        const feeData = await provider.getFeeData();
+        const gasCost = ethers.formatEther(gasEstimate * feeData.gasPrice);
+        return { gasEstimate, gasCost };
+      };
+
     const handleDonate = async (campaignId) => {
         if (!account) {
             alert('Te rugăm să te conectezi cu MetaMask pentru a dona!');
@@ -94,27 +102,25 @@ const CampaignList = () => {
         try {
             const signer = await provider.getSigner();
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-            
-            /*// Estimăm gas-ul înainte de tranzacție
             const amountInWei = ethers.parseEther(amount.toString());
-            const gasEstimate = await contract.estimateGas.donate(campaignId, { 
-                value: amountInWei 
-            });
-            const gasPrice = await provider.getGasPrice();
-            const gasCostInWei = gasEstimate.mul(gasPrice);
-            const gasCostInEth = ethers.formatEther(gasCostInWei);
+            // Estimăm gas-ul înainte de tranzacție
             
-            console.log("Estimated gas cost:", gasCostInEth, "ETH");
-    
+            const { gasEstimate, gasCost } = await estimateGasCost(
+                contract,
+                'donate',
+                [campaignId],
+                amountInWei
+            );
+                            
+             
+             // Executăm tranzacția cu gas limit estimat
+            const confirmDonation = window.confirm(
+                `Cost estimat gas: ${gasCost} ETH\n` +
+                `Doriți să continuați cu donația?`
+            );
+            
+            if (!confirmDonation) return;
 
-            // Verificăm dacă costul e prea mare (ex: peste 0.01 ETH)
-            if (parseFloat(gasCostInEth) > 0.01) {
-                alert(`Costul tranzacției este prea mare (${gasCostInEth} ETH). Încercați mai târziu.`);
-                return;
-            }
-                
-*/
-            
             // Verificăm și setăm minter role dacă e necesar
             const isMinter = await contract.checkMinterStatus();
             if (!isMinter) {
@@ -124,11 +130,11 @@ const CampaignList = () => {
             const govToken = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, signer);
             const balanceBefore = await govToken.balanceOf(account);
             
-            // Executăm tranzacția cu gas limit estimat
-            const amountInWei = ethers.parseEther(amount.toString());
+            
+    
             const tx = await contract.donate(campaignId, { 
                 value: amountInWei,
-                //gasLimit: gasEstimate
+                gasLimit: gasEstimate
             });
             await tx.wait();
     

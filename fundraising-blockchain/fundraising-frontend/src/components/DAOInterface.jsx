@@ -167,6 +167,12 @@ const DAOInterface = () => {
         return `${days}z ${hours}h rămase`;
     };
 
+    const estimateGasCost = async (contract, method, args = [], value = 0) => {         
+        const gasEstimate = await contract[method].estimateGas(...args, { value });         
+        const feeData = await provider.getFeeData();         
+        const gasCost = ethers.formatEther(gasEstimate * feeData.gasPrice);         
+        return { gasEstimate, gasCost };      };
+
     const createProposal = async (e) => {
         e.preventDefault();
         if (!account) {
@@ -190,7 +196,24 @@ const DAOInterface = () => {
     
             const signer = await provider.getSigner();
             const daoContract = new ethers.Contract(DAO_ADDRESS, DAO_ABI, signer);
-    
+            
+            const { gasEstimate, gasCost } = await estimateGasCost(
+                daoContract,
+                'propose',
+                [
+                    newProposal.title,
+                    newProposal.description,
+                    newProposal.campaignId
+                ]
+            );
+
+            const confirmCreate = window.confirm(
+                `Cost estimat gas: ${gasCost} ETH\n` +
+                `Doriți să creați propunerea?`
+            );
+            
+            if (!confirmCreate) return;
+
             const tx = await daoContract.propose(
                 newProposal.title,
                 newProposal.description,
@@ -216,6 +239,19 @@ const DAOInterface = () => {
             const signer = await provider.getSigner();
             const daoContract = new ethers.Contract(DAO_ADDRESS, DAO_ABI, signer);
             
+            const { gasEstimate, gasCost } = await estimateGasCost(
+                daoContract,
+                'castVote',
+                [proposalId, support]
+            );
+
+            const confirmVote = window.confirm(
+                `Cost estimat gas: ${gasCost} ETH\n` +
+                `Doriți să votați?`
+            );
+            
+            if (!confirmVote) return;
+
             if (votedProposals[proposalId]) {
                 alert('Ai votat deja pentru această propunere');
                 return;

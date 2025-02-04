@@ -70,6 +70,14 @@ const CreateCampaignForm = () => {
         }));
     };
 
+    const estimateGasCost = async (contract, method, args = [], value = 0) => {
+        const gasEstimate = await contract[method].estimateGas(...args, { value });
+        const feeData = await provider.getFeeData();
+        const gasCost = ethers.formatEther(gasEstimate * feeData.gasPrice);
+        return { gasEstimate, gasCost };
+     };
+
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!account) {
@@ -89,6 +97,26 @@ const CreateCampaignForm = () => {
                 CONTRACT_ABI,
                 signer
             );
+
+            const { gasEstimate, gasCost } = await estimateGasCost(
+                contract,
+                'createCampaign',
+                [
+                    formData.title,
+                    formData.description,
+                    ethers.parseEther(formData.goal),
+                    formData.beneficiary || account,
+                    parseInt(formData.duration),
+                    ipfsHashes
+                ]
+            );
+
+            const confirmCreate = window.confirm(
+                `Cost estimat gas: ${gasCost} ETH\n` +
+                `Doriți să creați campania?`
+            );
+            
+            if (!confirmCreate) return;
 
             const beneficiary = formData.beneficiary || account;
 
