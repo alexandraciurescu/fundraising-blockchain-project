@@ -1,7 +1,7 @@
 // Contract addresses
-export const CONTRACT_ADDRESS = "0x2dC5A342CD8Ab55ED14eafC5D084fCb37a89654d";
-export const TOKEN_ADDRESS = "0xAE22441316efF55087396dE8fCc713fcc31B52F6";
-export const DAO_ADDRESS = "0x35148149539657c04f40A18bE293651b3BEBa017";
+export const CONTRACT_ADDRESS = "0x5D4e0B499b02ee095664ABfCcdfAB4DdAB685Ab5";
+export const TOKEN_ADDRESS = "0xe14564c8FD3Db69720104Ae6B2bf905662A0b168";
+export const DAO_ADDRESS = "0xDD009e3730520526675004ff248a628c27804553";
 
 // ABI pentru contractul original de fundraising
 export const CONTRACT_ABI = [
@@ -118,6 +118,11 @@ export const CONTRACT_ABI = [
                 "internalType": "uint256",
                 "name": "_durationDays",
                 "type": "uint256"
+            },
+            {
+                "internalType": "string[]",
+                "name": "_ipfsHashes",
+                "type": "string[]"
             }
         ],
         "name": "createCampaign",
@@ -182,6 +187,16 @@ export const CONTRACT_ABI = [
                 "internalType": "uint256",
                 "name": "deadline",
                 "type": "uint256"
+            },
+            {
+                "internalType": "bool",
+                "name": "fundsReleased",
+                "type": "bool"
+            },
+            {
+                "internalType": "string[]",
+                "name": "ipfsDocuments",
+                "type": "string[]"
             }
         ],
         "stateMutability": "view",

@@ -31,6 +31,7 @@ const CampaignList = () => {
             }
     
             const campaignDetails = await Promise.all(campaignPromises);
+            console.log("Campaign Details Raw:", campaignDetails);
             
             // Să vedem exact ce primim
             console.log("Campaign Details Raw:", campaignDetails);
@@ -39,14 +40,15 @@ const CampaignList = () => {
             // Accesăm datele folosind numele proprietăților
             const formattedCampaigns = campaignDetails.map((campaign, index) => ({
                 id: index,
-                title: campaign.title,
-                description: campaign.description,
-                goal: campaign.goal,
-                raisedAmount: campaign.raisedAmount,
-                beneficiary: campaign.beneficiary,
-                active: campaign.active,
-                deadline: campaign.deadline,
-                fundsReleased: campaign.fundsReleased
+                title: campaign[0],
+                description: campaign[1],
+                goal: campaign[2],
+                raisedAmount: campaign[3],
+                beneficiary: campaign[4],
+                active: campaign[5],
+                deadline: campaign[6],
+                fundsReleased: campaign[7] || false,
+                ipfsDocuments: campaign[8] || []
             }));
     
             console.log("Campanii formatate:", formattedCampaigns);
@@ -93,6 +95,26 @@ const CampaignList = () => {
             const signer = await provider.getSigner();
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
             
+            /*// Estimăm gas-ul înainte de tranzacție
+            const amountInWei = ethers.parseEther(amount.toString());
+            const gasEstimate = await contract.estimateGas.donate(campaignId, { 
+                value: amountInWei 
+            });
+            const gasPrice = await provider.getGasPrice();
+            const gasCostInWei = gasEstimate.mul(gasPrice);
+            const gasCostInEth = ethers.formatEther(gasCostInWei);
+            
+            console.log("Estimated gas cost:", gasCostInEth, "ETH");
+    
+
+            // Verificăm dacă costul e prea mare (ex: peste 0.01 ETH)
+            if (parseFloat(gasCostInEth) > 0.01) {
+                alert(`Costul tranzacției este prea mare (${gasCostInEth} ETH). Încercați mai târziu.`);
+                return;
+            }
+                
+*/
+            
             // Verificăm și setăm minter role dacă e necesar
             const isMinter = await contract.checkMinterStatus();
             if (!isMinter) {
@@ -101,14 +123,30 @@ const CampaignList = () => {
     
             const govToken = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, signer);
             const balanceBefore = await govToken.balanceOf(account);
-            console.log("Balanța HDAO înainte:", ethers.formatEther(balanceBefore));
-    
+            
+            // Executăm tranzacția cu gas limit estimat
             const amountInWei = ethers.parseEther(amount.toString());
-            const tx = await contract.donate(campaignId, { value: amountInWei });
+            const tx = await contract.donate(campaignId, { 
+                value: amountInWei,
+                //gasLimit: gasEstimate
+            });
             await tx.wait();
     
+            // Restul codului rămâne la fel
+            await new Promise(resolve => setTimeout(resolve, 2000));
             const balanceAfter = await govToken.balanceOf(account);
+            console.log("Balanța HDAO înainte:", ethers.formatEther(balanceBefore));
             console.log("Balanța HDAO după:", ethers.formatEther(balanceAfter));
+    
+            // Verificări suplimentare...
+            const owner = await govToken.owner();
+            console.log("Token owner:", owner);
+    
+            if (balanceAfter === balanceBefore) {
+                console.error("Balance didn't change after donation!");
+                const isMinterAfter = await contract.checkMinterStatus();
+                console.log("Is still minter after donation?", isMinterAfter);
+            }
     
             alert('Donație realizată cu succes!');
             setDonationAmount(prev => ({...prev, [campaignId]: ''}));
@@ -152,7 +190,11 @@ const CampaignList = () => {
         );
     }
 
+  
+
     return (
+
+        
         <div className="max-w-6xl mx-auto mt-8 px-4">
             <h2 className="text-2xl font-bold mb-6">Campanii Active</h2>
             
@@ -182,7 +224,23 @@ const CampaignList = () => {
                                     <p className="text-green-600">Fonduri eliberate către beneficiar</p>
                                 }
                             </div>
+
+                          
+                        <div className="mt-4">
+                        <h4 className="text-sm font-medium">Documente:</h4>
+                        {campaign.ipfsDocuments?.map((hash, index) => (
+                            <a
+                                key={index}
+                                href={`https://gateway.pinata.cloud/ipfs/${hash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline block">
                             
+                                Document {index + 1}
+                            </a>
+                        ))}
+                    </div>
+                                                
                             {campaign.active && !campaign.fundsReleased && (
                                 <div className="space-y-2">
                                     <div className="flex space-x-2">
@@ -195,6 +253,8 @@ const CampaignList = () => {
                                             step="0.01"
                                             min="0"
                                         />
+
+
                                         <button 
                                             onClick={() => handleDonate(campaign.id)}
                                             disabled={!donationAmount[campaign.id]}
@@ -202,6 +262,8 @@ const CampaignList = () => {
                                         >
                                             Donează
                                         </button>
+
+                                         
                                     </div>
                                 </div>
                             )}

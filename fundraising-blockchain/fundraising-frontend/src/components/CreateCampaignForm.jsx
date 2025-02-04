@@ -2,6 +2,23 @@ import React, { useState } from 'react';
 import { useWallet } from '../context/WalletContext';
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../utils/contractConfig';
+import { create } from 'ipfs-http-client';
+import axios from 'axios';
+import { PINATA_CONFIG } from '../config/pinata';
+
+
+// Configurare Pinata
+//const pinataApiKey = process.env.VITE_PINATA_API_KEY;
+//const pinataApiSecret = process.env.VITE_PINATA_API_SECRET;
+
+/*const ipfs = create({
+    host: 'ipfs.infura.io',
+    port: 5001,
+    protocol: 'https'
+  });*/
+
+console.log("Pinata Key:", import.meta.env.VITE_PINATA_API_KEY);
+console.log("Pinata Secret exists:", !!import.meta.env.VITE_PINATA_API_SECRET);
 
 const CreateCampaignForm = () => {
     const { account, provider } = useWallet();
@@ -13,6 +30,37 @@ const CreateCampaignForm = () => {
         duration: '',
         beneficiary: ''
     });
+
+    const [files, setFiles] = useState([]);
+
+    const uploadToPinata = async (file) => {
+        if (!file) return;
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            console.log('Starting upload with Pinata config...');
+
+            const response = await axios({
+                method: 'post',
+                url: 'https://api.pinata.cloud/pinning/pinFileToIPFS',
+                data: formData,
+                headers: {
+                    'Content-Type': `multipart/form-data;`,
+                    pinata_api_key: PINATA_CONFIG.apiKey,
+                    pinata_secret_api_key: PINATA_CONFIG.apiSecret
+                }
+            });
+
+            console.log('Upload successful:', response.data);
+
+            return response.data.IpfsHash;
+        } catch (error) {
+            console.error('Error uploading to Pinata:', error);
+            throw new Error('Failed to upload to Pinata');
+        }
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -31,6 +79,9 @@ const CreateCampaignForm = () => {
 
         try {
             setIsLoading(true);
+            const ipfsHashes = await Promise.all(
+                files.map(file => uploadToPinata(file))
+              );
             const goalInWei = ethers.parseEther(formData.goal.toString());
             const signer = await provider.getSigner();
             const contract = new ethers.Contract(
@@ -51,7 +102,8 @@ const CreateCampaignForm = () => {
                 formData.description,
                 goalInWei,
                 beneficiary,
-                parseInt(formData.duration)
+                parseInt(formData.duration),
+                ipfsHashes
             );
 
             await tx.wait();
@@ -64,6 +116,7 @@ const CreateCampaignForm = () => {
                 duration: '',
                 beneficiary: ''
             });
+            setFiles([]);
 
         } catch (error) {
             console.error('Eroare la crearea campaniei:', error);
@@ -167,6 +220,18 @@ const CreateCampaignForm = () => {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         disabled={isLoading}
                     />
+                </div>
+
+                <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Documente Support (IPFS)
+                </label>
+                <input
+                    type="file"
+                    multiple
+                    onChange={(e) => setFiles(Array.from(e.target.files))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                />
                 </div>
 
                 <button

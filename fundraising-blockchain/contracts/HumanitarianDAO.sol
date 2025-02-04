@@ -25,7 +25,7 @@ contract HumanitarianDAO {
     HumanitarianFund public fund;
     uint256 public proposalCount;
     mapping(uint256 => Proposal) public proposals;
-    uint256 public votingPeriod = 3 days;
+    uint256 public votingPeriod = 5 minutes;
     uint256 public votingDelay = 0 days;
     uint256 public quorumVotes;
 
@@ -64,7 +64,8 @@ contract HumanitarianDAO {
         require(bytes(title).length > 0, "Title cannot be empty");
         
         // Verifică dacă campania există și dacă fondurile nu au fost deja eliberate
-        (,,,,,,,bool fundsReleased) = fund.getCampaign(campaignId);
+        (,,,,,, , bool fundsReleased, ) = fund.getCampaign(campaignId);
+
         require(!fundsReleased, "Funds already released for this campaign");
         
         uint256 proposalId = proposalCount++;
@@ -108,15 +109,19 @@ contract HumanitarianDAO {
         emit VoteCast(msg.sender, proposalId, support, votes);
     }
 
+    function _hasReachedQuorum(uint256 totalVotes) private view returns (bool) {
+       return totalVotes >= quorumVotes;
+}
+
     function executeProposal(uint256 proposalId) public {
         Proposal storage proposal = proposals[proposalId];
         require(block.timestamp > proposal.endTime, "Voting not ended");
         require(!proposal.executed && !proposal.canceled, "Proposal already executed or canceled");
         require(proposal.forVotes > proposal.againstVotes, "Proposal not passed");
-        require(proposal.forVotes + proposal.againstVotes >= quorumVotes, "Quorum not reached");
+        require(_hasReachedQuorum(proposal.forVotes + proposal.againstVotes), "Quorum not reached");
 
         // Verifică din nou dacă fondurile nu au fost deja eliberate
-        (,,,,,,,bool fundsReleased) = fund.getCampaign(proposal.campaignId);
+        (,,,,,, , bool fundsReleased, ) = fund.getCampaign(proposal.campaignId);
         require(!fundsReleased, "Funds already released for this campaign");
 
         proposal.executed = true;
@@ -167,4 +172,12 @@ contract HumanitarianDAO {
     function hasVoted(uint256 proposalId, address voter) public view returns (bool) {
         return proposals[proposalId].hasVoted[voter];
     }
+
+    // Funcție internal - verificare pentru starea propunerii
+   function _isProposalActive(Proposal storage prop) internal view returns (bool) {
+        return block.timestamp >= prop.startTime && 
+           block.timestamp <= prop.endTime && 
+           !prop.executed && 
+           !prop.canceled;
+}
 }

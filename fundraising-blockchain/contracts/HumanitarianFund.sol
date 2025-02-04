@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./GovernanceToken.sol";
+import "hardhat/console.sol"; // pentru logging
 
 contract HumanitarianFund {
     struct Campaign {
@@ -13,8 +14,10 @@ contract HumanitarianFund {
         bool active;
         uint256 deadline;
         bool fundsReleased;
+        string[] ipfsDocuments; //documentele stocate pe IPFS
     }
 
+   
     mapping(uint256 => Campaign) public campaigns;
     uint256 public campaignCount;
     address public admin;
@@ -47,6 +50,9 @@ contract HumanitarianFund {
         admin = msg.sender;
         governanceToken = GovernanceToken(_governanceToken);
     }*/
+    // aici setam ca adminul e cel care deployeaza contractul
+    // se seteaza contractul ca minter de tokeni
+    // pt a le da tokeni celor care doneaza
     constructor(address _governanceToken) {
         admin = msg.sender;
         governanceToken = GovernanceToken(_governanceToken);
@@ -57,6 +63,8 @@ contract HumanitarianFund {
             // Dacă eșuează în constructor, vom încerca mai târziu prin setupMinterRole()
         }
     }
+
+    // mdoificatori (conditii care se verfica inainte de executarea functiilor)
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin can call this function");
         _;
@@ -72,6 +80,11 @@ contract HumanitarianFund {
         _;
     }
 
+    // Funcție pure - calculează tokenii pentru o donație
+    function calculateTokens(uint256 ethAmount) public pure returns (uint256) {
+       return (ethAmount * TOKENS_PER_ETH * 1e18) / 1 ether;
+}
+
     function setupMinterRole() external onlyAdmin {
         governanceToken.setMinter(address(this), true);
     }
@@ -80,12 +93,14 @@ contract HumanitarianFund {
         daoContract = _daoContract;
     }
 
+    // doar adminul poate crea campanii
     function createCampaign(
         string memory _title,
         string memory _description,
         uint256 _goal,
         address payable _beneficiary,
-        uint256 _durationDays
+        uint256 _durationDays,
+        string[] memory _ipfsHashes
     ) external onlyAdmin {
         Campaign memory newCampaign = Campaign({
             title: _title,
@@ -95,7 +110,8 @@ contract HumanitarianFund {
             beneficiary: _beneficiary,
             active: true,
             deadline: block.timestamp + (_durationDays * 1 days),
-            fundsReleased: false
+            fundsReleased: false,
+            ipfsDocuments: _ipfsHashes
         });
 
         campaigns[campaignCount] = newCampaign;
@@ -106,15 +122,30 @@ contract HumanitarianFund {
     function checkMinterStatus() public view returns (bool) {
     return governanceToken.minters(address(this));
 }
+   
+    // internal function
+    function _checkCampaignValidity(uint256 _campaignId) internal view returns (bool) {
+      Campaign storage campaign = campaigns[_campaignId];
+      return campaign.active && block.timestamp < campaign.deadline;
+}
 
+    
     function donate(uint256 _campaignId) external payable campaignExists(_campaignId) {
     Campaign storage campaign = campaigns[_campaignId];
+    require(_checkCampaignValidity(_campaignId), "Campaign not valid");
     require(campaign.active, "Campaign is not active");
     require(block.timestamp < campaign.deadline, "Campaign has ended");
     require(!campaign.fundsReleased, "Funds have been released");
-
-    uint256 tokensToMint = (msg.value * TOKENS_PER_ETH) / 1 ether;
+     
+    //uint256 tokensToMint = (msg.value * TOKENS_PER_ETH) / 1 ether;
+    uint256 tokensToMint = calculateTokens(msg.value);
     campaign.raisedAmount += msg.value;
+
+     // debug
+    console.log("Contract address:", address(this));
+    console.log("Is minter?", governanceToken.minters(address(this)));
+    console.log("Trying to mint tokens:", tokensToMint);
+    console.log("To address:", msg.sender);
     
     require(governanceToken.minters(address(this)), "Contract is not a minter");
     governanceToken.mint(msg.sender, tokensToMint);
@@ -126,6 +157,7 @@ contract HumanitarianFund {
     }
 }
 
+   // poate fi apelata doar de DAO - se transfera fondurile la beneficiar
     function releaseFunds(uint256 _campaignId) external onlyDAO campaignExists(_campaignId) {
         Campaign storage campaign = campaigns[_campaignId];
         require(!campaign.active, "Campaign must be completed");
@@ -148,7 +180,8 @@ contract HumanitarianFund {
             address beneficiary,
             bool active,
             uint256 deadline,
-            bool fundsReleased
+            bool fundsReleased,
+            string[] memory ipfsDocuments
         )
     {
         Campaign memory campaign = campaigns[_campaignId];
@@ -160,7 +193,8 @@ contract HumanitarianFund {
             campaign.beneficiary,
             campaign.active,
             campaign.deadline,
-            campaign.fundsReleased
+            campaign.fundsReleased,
+            campaign.ipfsDocuments
         );
     }
 }
